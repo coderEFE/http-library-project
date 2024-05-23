@@ -1,5 +1,5 @@
 // Instantiate the object
-const http = new coreHTTP;
+const http = new CoreHTTP();//'https://jsonplaceholder.typicode.com'
 
 function ShowResponse(responseData) {
   let html = "<ul style='list-style:none'>";
@@ -14,6 +14,10 @@ function ShowResponse(responseData) {
     html += `<li>User ${responseData.id} - ${responseData.name}</li>`;
   }
   document.querySelector("#response").innerHTML = html;
+}
+
+function ShowDelete () {
+  document.querySelector("#response").innerHTML = "User Deleted";
 }
 
 function ShowError(err) {
@@ -56,7 +60,41 @@ function ProcessDelete(err, respStr) {
   }
 }
 
-function sendRequest(reqType, targetURL, data) {
+async function sendRequest(reqType, targetURL, data) {
+  try {
+    let responseStr = "";
+
+    switch (reqType) {
+      case "get": // Get users from the endpoint
+        console.log("get");
+        responseStr = await http.get(targetURL);
+        ShowResponse(responseStr);
+        break;
+      case "post": // Post (add) user to the endpoint
+        responseStr = await http.post(targetURL, data);
+        ShowResponse(responseStr);
+        break;
+      case "put": // Put (update) user in the endpoint
+        responseStr = await http.put(targetURL, data);
+        ShowResponse(responseStr);
+        break;
+      case "delete": // Delete user in the placeholder website
+        responseStr = await http.delete(targetURL);
+        ShowDelete();
+        break; 
+      case "patch": // modifying the request
+        responseStr = await http.patch(targetURL, data);
+        ShowResponse(responseStr);
+    }
+    console.log(responseStr);
+
+  } catch (err) {
+    console.log(`Error: ${err}`)
+    ShowError(err);
+  }
+}
+
+/*function sendRequest(reqType, targetURL, data) {
 
   switch (reqType) {
     case "get": // Get users from the endpoint
@@ -72,7 +110,7 @@ function sendRequest(reqType, targetURL, data) {
       http.delete(targetURL, ProcessDelete);
       break;            
   }
-}
+}*/
 
 function ValidId(id, required = false) {
   let isValid;
@@ -161,12 +199,28 @@ function SetupRequest() {
     document.querySelector("#uNameArea>input").value = "";
     okToSend = (ValidId(document.querySelector("#uIdArea>input").value,true));
   };
+
+  if(reqType === "patch") {
+    okToSend = false;
+    if (ValidId(document.querySelector("#uIdArea>input").value,true)) {
+      let uFullName = document.querySelector("#uNameArea>input").value;
+      if (ValidName(uFullName)) {
+        let uName = uFullName.split(" ")[0].trim();
+        let uMail = uName.concat("@spu.edu");
+        data = {
+          name:`${uFullName}`,
+          username:`${uName}`,
+          email:`${uMail}`};
+        okToSend = true;
+      };
+    }
+  }
   
   if (okToSend) {
     route = route.concat(document.querySelector("#uIdArea>input").value);
     document.querySelector("#uIdArea>input").style.border = "1px solid lightgrey";
     document.querySelector("#uNameArea>input").style.border = "1px solid lightgrey";
-    sendRequest(reqType,route, data);
+    sendRequest(reqType, route, data);
     document.querySelector("#uIdArea>input").value = "";
     document.querySelector("#uNameArea>input").value = "";
   } else {
@@ -193,6 +247,10 @@ function SetupInput(reqType) {
       document.querySelector("#uIdArea").style.display = "flex";
       document.querySelector("#uNameArea").style.display = "none";
       break;
+    case "patch":
+      document.querySelector("#uIdArea").style.display = "flex";
+      document.querySelector("#uNameArea").style.display = "flex";
+      break;
   }
 }
 
@@ -206,6 +264,8 @@ function StartUp() {
   document.querySelector("#rbPost").addEventListener("change", () => SetupInput("post"));
   document.querySelector("#rbPut").addEventListener("change", () => SetupInput("put"));
   document.querySelector("#rbDelete").addEventListener("change", () => SetupInput("delete"));
+  document.querySelector("#rbPatch").addEventListener("change", () => SetupInput("patch"));
+
 
   // Add the listener to the SEND button
   document.querySelector("#SendReq").addEventListener("click", (e) => {
