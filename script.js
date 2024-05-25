@@ -8,10 +8,10 @@ function ShowResponse(responseData) {
     html += `<li>${responseData}</li>`;
   } else if (Array.isArray(responseData)) {
     responseData.forEach(user => {
-      html += `<li>User ${user.id} - ${user.name}</li>`;
+      html += `<li>User ${user.id} - ${user.name} - ${user.email}</li>`;
     })
   } else {
-    html += `<li>User ${responseData.id} - ${responseData.name}</li>`;
+    html += `<li>User ${responseData.id} - ${responseData.name} - ${responseData.email}</li>`;
   }
   document.querySelector("#response").innerHTML = html;
 }
@@ -23,41 +23,6 @@ function ShowDelete () {
 function ShowError(err) {
   html = `<p>${err}</p>`;
   document.querySelector("#response").innerHTML = html;
-}
-
-function ProcessGet(err, respStr) {
-  if (err) {
-    ShowError(err);
-  } else {
-    const respObj = JSON.parse(respStr);
-    ShowResponse(respObj);
-  }
-}
-
-function ProcessPost(err, respStr) {
-  if (err) {
-    ShowError(err);
-  } else {
-    const respObj = JSON.parse(respStr);
-    ShowResponse(respObj);
-  }
-}
-
-function ProcessPut(err, respStr) {
-  if (err) {
-    ShowError(err);
-  } else {
-    const respObj = JSON.parse(respStr);
-    ShowResponse(respObj);
-  }
-}
-
-function ProcessDelete(err, respStr) {
-  if (err) {
-    ShowError(err);
-  } else {
-    ShowResponse(respStr);
-  }
 }
 
 async function sendRequest(reqType, targetURL, data) {
@@ -118,7 +83,7 @@ function ValidId(id, required = false) {
   if (id.length > 0) {
     isValid = (Number.isInteger(Number(id)))
     if (isValid) {
-      isValid = ((Number(id) > 1 && Number(id) < 11));
+      isValid = ((Number(id) > 0 && Number(id) < 11));
     }
   } else if (required) {
     isValid = false;
@@ -134,9 +99,9 @@ function ValidId(id, required = false) {
   return isValid;
 }
 
-function ValidName(fullName) {
+function ValidName(fullName, required = true) {
   let isValid = true;
-  if (!fullName.length > 0) {
+  if (!fullName.length > 0 && required) {
     isValid = false;
     document.querySelector("#uNameArea>input").style.border = "2px solid red";
     document.querySelector("#uNameArea>input").placeholder = "Name required!";
@@ -147,7 +112,7 @@ function ValidName(fullName) {
 
 function SetupRequest() {
   let route = document.querySelector("#route").value;
-  let data = "";
+  let data = {};
 
   const radioButtons = document.querySelectorAll("input[name='HTTPtype'");
   let reqType;
@@ -172,14 +137,14 @@ function SetupRequest() {
       let uName = uFullName.split(" ")[0].trim();
       let uMail = uName.concat("@spu.edu");
       data = {
-        name:`${uFullName}`,
-        username:`${uName}`,
-        email:`${uMail}`};
+        name: uFullName,
+        username: uName,
+        email: uMail};
       okToSend = true;
     };
   }
 
-  if (reqType === "put") {
+  if(reqType === "put") {
     okToSend = false;
     if (ValidId(document.querySelector("#uIdArea>input").value,true)) {
       let uFullName = document.querySelector("#uNameArea>input").value;
@@ -187,9 +152,10 @@ function SetupRequest() {
         let uName = uFullName.split(" ")[0].trim();
         let uMail = uName.concat("@spu.edu");
         data = {
-          name:`${uFullName}`,
-          username:`${uName}`,
-          email:`${uMail}`};
+          name: uFullName,
+          username: uName,
+          email: uMail
+        };
         okToSend = true;
       };
     }
@@ -200,19 +166,22 @@ function SetupRequest() {
     okToSend = (ValidId(document.querySelector("#uIdArea>input").value,true));
   };
 
-  if(reqType === "patch") {
+  if (reqType === "patch") {
     okToSend = false;
     if (ValidId(document.querySelector("#uIdArea>input").value,true)) {
       let uFullName = document.querySelector("#uNameArea>input").value;
-      if (ValidName(uFullName)) {
+      if (uFullName.trim().length && ValidName(uFullName, false)) {
+        console.log("name");
         let uName = uFullName.split(" ")[0].trim();
-        let uMail = uName.concat("@spu.edu");
-        data = {
-          name:`${uFullName}`,
-          username:`${uName}`,
-          email:`${uMail}`};
+        data.name = uFullName;
+        data.username = uName;
         okToSend = true;
       };
+      let uMail = document.querySelector("#uEmailArea>input").value;
+      if (uMail.trim().length) {
+        data.email = uMail;
+        okToSend = true;
+      }
     }
   }
   
@@ -220,11 +189,14 @@ function SetupRequest() {
     route = route.concat(document.querySelector("#uIdArea>input").value);
     document.querySelector("#uIdArea>input").style.border = "1px solid lightgrey";
     document.querySelector("#uNameArea>input").style.border = "1px solid lightgrey";
+    document.querySelector("#uEmailArea>input").style.border = "1px solid lightgrey";
     sendRequest(reqType, route, data);
     document.querySelector("#uIdArea>input").value = "";
     document.querySelector("#uNameArea>input").value = "";
+    document.querySelector("#uEmailArea>input").value = "";
   } else {
     console.log("Input Error");
+    ShowError("Input Error");
   }
 }
 
@@ -234,22 +206,27 @@ function SetupInput(reqType) {
     case "get":
       document.querySelector("#uIdArea").style.display = "flex";
       document.querySelector("#uNameArea").style.display = "none";
+      document.querySelector("#uEmailArea").style.display = "none";
       break;
     case "post":
       document.querySelector("#uIdArea").style.display = "none";
       document.querySelector("#uNameArea").style.display = "flex";
+      document.querySelector("#uEmailArea").style.display = "none";
       break;
     case "put":
       document.querySelector("#uIdArea").style.display = "flex";
       document.querySelector("#uNameArea").style.display = "flex";
+      document.querySelector("#uEmailArea").style.display = "none";
       break;
     case "delete":
       document.querySelector("#uIdArea").style.display = "flex";
       document.querySelector("#uNameArea").style.display = "none";
+      document.querySelector("#uEmailArea").style.display = "none";
       break;
     case "patch":
       document.querySelector("#uIdArea").style.display = "flex";
       document.querySelector("#uNameArea").style.display = "flex";
+      document.querySelector("#uEmailArea").style.display = "flex";
       break;
   }
 }
